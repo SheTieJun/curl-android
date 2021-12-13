@@ -219,7 +219,7 @@ fi
 
 echo "openssl输出目录 =$opensslDir "
 
-export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE$API-clang --sysroot=$AOSP_SYSROOT"
+export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-gcc --sysroot=$AOSP_SYSROOT"
 
 
 VERBOSE=1
