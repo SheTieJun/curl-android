@@ -244,8 +244,7 @@ cd  $SSLPATH
 
 pwd
 
-PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$host/bin:$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/$host/bin:$PATH
-
+PATH=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86_64/bin:$PATH
 
 ## 最终成MakeFile
 ./Configure $openssl_target --libdir=$openssl_lib no-asm shared no-cast no-idea no-camellia no-comp -D__ANDROID_API__=$API --prefix=$opensslDir  --openssldir=$opensslDir
