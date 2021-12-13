@@ -24,7 +24,7 @@ jobs:
         with:
           # Exact version to use
           # ndk-version: r20 
-          ndk-version: r10 
+          ndk-version: r15 
           # Add installation directory to path
           add-to-path: false
       # 执行shell
