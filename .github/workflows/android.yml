@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [ master]
+    branches: [ dev_gcc]
 
 jobs:
   # This workflow contains a single job called "build"
@@ -23,7 +23,8 @@ jobs:
         id: setup-ndk
         with:
           # Exact version to use
-          ndk-version: r20
+          # ndk-version: r20 
+          ndk-version: r10 
           # Add installation directory to path
           add-to-path: false
       # 执行shell

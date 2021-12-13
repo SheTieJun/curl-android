@@ -11,6 +11,11 @@
 # See http://www.cryptopp.com/wiki/Android_(Command_Line) for more details
 # ====================================================================
 
+real_path() {
+	echo "$PWD"
+}
+
+
 unset IS_CROSS_COMPILE
 
 unset IS_IOS
@@ -23,12 +28,23 @@ unset AOSP_STL_INC
 unset AOSP_STL_LIB
 unset AOSP_BITS_INC
 
+export API=21 
+
+
+REL_SCRIPT_PATH="$(dirname $0)"
+SCRIPTPATH=$(real_path $REL_SCRIPT_PATH)
+CURLPATH="$SCRIPTPATH/curl"
+SSLPATH="$SCRIPTPATH/openssl"
+
+echo "CURLPATH=$CURLPATH"
+echo "SSLPATH=$SSLPATH"
+
 if [ -f /proc/cpuinfo ]; then
 	JOBS=$(grep flags /proc/cpuinfo |wc -l)
 elif [ ! -z $(which sysctl) ]; then
 	JOBS=$(sysctl -n hw.ncpu)
 else
-	JOBS=2
+	JOBS=8
 fi
 
 
@@ -158,7 +174,7 @@ esac
 # like /opt/android-ndk-r10e/toolchains/arm-linux-androideabi-4.7/prebuilt/linux-x86_64/bin
 # Once we locate the tools, we add it to the PATH.
 AOSP_TOOLCHAIN_PATH=""
-for host in "linux-x86_64" "darwin-x86_64" "linux-x86" "darwin-x86"
+for host in "linux-x86_64" "darwin-x86_64" "linux-x86" "darwin-x86" "windows" "windows-x86_64"
 do
     if [ -d "$ANDROID_NDK_ROOT/toolchains/$TOOLCHAIN_BASE-$AOSP_TOOLCHAIN_SUFFIX/prebuilt/$host/bin" ]; then
         AOSP_TOOLCHAIN_PATH="$ANDROID_NDK_ROOT/toolchains/$TOOLCHAIN_BASE-$AOSP_TOOLCHAIN_SUFFIX/prebuilt/$host/bin"
@@ -186,48 +202,110 @@ export AOSP_SYSROOT="$ANDROID_NDK_ROOT/platforms/$AOSP_API/$AOSP_ARCH"
 # TODO: export for the previous GNUmakefile-cross. These can go away eventually.
 export ANDROID_SYSROOT=$AOSP_SYSROOT
 
+#####################################################################
+
+export opensslDir=$(pwd)/android-lib-openssl/$AOSP_ABI
+
+if [ ! -d $opensslDir  ];then
+ mkdir -p $opensslDir
+fi
+
+export openssl_lib=$opensslDir/lib
+
+if [ ! -d $openssl_lib  ];then
+ mkdir -p $openssl_lib
+fi
+
+
+echo "openssl输出目录 =$opensslDir "
+
+export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE$API-clang --sysroot=$AOSP_SYSROOT"
+
+
+VERBOSE=1
+if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" != "0" ]; then
+  echo "job:"$JOBS
+  echo "API:"$API
+  echo "ANDROID_NDK_ROOT: $ANDROID_NDK_ROOT"
+  echo "AOSP_TOOLCHAIN_PATH: $AOSP_TOOLCHAIN_PATH"
+  echo "AOSP_ABI: $AOSP_ABI"  
+  echo "AOSP_API: $AOSP_API"
+  echo "CC: $CC"
+  echo "AOSP_SYSROOT: $AOSP_SYSROOT"
+  echo "AOSP_FLAGS: $AOSP_FLAGS"
+  # echo "AOSP_STL_INC: $AOSP_STL_INC"
+  # echo "AOSP_STL_LIB: $AOSP_STL_LIB"
+
+fi
+
+echo "start build openssl"
+
+cd  $SSLPATH
+
+pwd
+
+PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/$host/bin:$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/$host/bin:$PATH
+
+
+## 最终成MakeFile
+./Configure $openssl_target --libdir=$openssl_lib no-asm shared no-cast no-idea no-camellia no-comp -D__ANDROID_API__=$API --prefix=$opensslDir  --openssldir=$opensslDir
+
+
+EXITCODE=$?
+if [ $EXITCODE -ne 0 ]; then
+	echo "Error building the libssl and libcrypto"
+	cd $PWD
+	exit $EXITCODE
+fi
+
+make clean
+
+make -j$JOBS
+
+make install
+
 
 #####################################################################
 
-# Android STL. We support GNU, LLVM and STLport out of the box.
+# # Android STL. We support GNU, LLVM and STLport out of the box.
 
-if [ "$#" -lt 2 ]; then
-    THE_STL=stlport-shared
-else
-    THE_STL=$(tr [A-Z] [a-z] <<< "$2")
-fi
+# if [ "$#" -lt 2 ]; then
+#     THE_STL=stlport-shared
+# else
+#     THE_STL=$(tr [A-Z] [a-z] <<< "$2")
+# fi
 
-case "$THE_STL" in
-  stlport-static)
-    AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
-    AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_static.a"
-    ;;
-  stlport|stlport-shared)
-    AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
-    AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_shared.so"
-    ;;
-  gabi++-static|gnu-static)
-    AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
-    AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
-    AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_static.a"
-    ;;
-  gnu|gabi++|gnu-shared|gabi++-shared)
-    AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
-    AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
-    AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_shared.so"
-    ;;
-  llvm-static)
-    AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
-    AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_static.a"
-    ;;
-  llvm|llvm-shared)
-    AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
-    AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_shared.so"
-    ;;
-  *)
-    echo "ERROR: Unknown STL library $2"
-    [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
-esac
+# case "$THE_STL" in
+#   stlport-static)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_static.a"
+#     ;;
+#   stlport|stlport-shared)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_shared.so"
+#     ;;
+#   gabi++-static|gnu-static)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
+#     AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_static.a"
+#     ;;
+#   gnu|gabi++|gnu-shared|gabi++-shared)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
+#     AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_shared.so"
+#     ;;
+#   llvm-static)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_static.a"
+#     ;;
+#   llvm|llvm-shared)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_shared.so"
+#     ;;
+#   *)
+#     echo "ERROR: Unknown STL library $2"
+#     [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+# esac
 
 
 #####################################################################
@@ -240,37 +318,55 @@ export CFLAGS="-pie -fPIE"
 export LDFLAGS="-pie -fPIE"
 #####################################################################
 
+echo "start build curl"
 
-export PREFIX=$(pwd)/android-lib/$THE_ARCH
-export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-gcc --sysroot=$AOSP_SYSROOT"
+cd ..
 
+export outCurlib=$(pwd)/android-lib-curl/$AOSP_ABI
 
-VERBOSE=1
-if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" != "0" ]; then
-  echo "ANDROID_NDK_ROOT: $ANDROID_NDK_ROOT"
-  echo "AOSP_TOOLCHAIN_PATH: $AOSP_TOOLCHAIN_PATH"
-  echo "AOSP_ABI: $AOSP_ABI"  
-  echo "AOSP_API: $AOSP_API"
-  echo "CC: $CC"
-  echo "AOSP_SYSROOT: $AOSP_SYSROOT"
-  echo "AOSP_FLAGS: $AOSP_FLAGS"
-  echo "AOSP_STL_INC: $AOSP_STL_INC"
-  echo "AOSP_STL_LIB: $AOSP_STL_LIB"
-
+if [ ! -d $outCurlib  ];then
+  mkdir -p $outCurlib
 fi
 
-cd  openssl-3.0.0
- ./config no-asm shared no-cast no-idea no-camellia --openssldir=$(pwd)/openssl-3.0.0/ssl
+echo "Curlib输出目录 =$outCurlib "
+pwd
 
-# make
+cd  $CURLPATH
+# # ./Configure android no-asm no-shared no-cast no-idea no-camellia no-whirpool
+if [ ! -x "configure" ]; then
+	echo "Curl needs external tools to be compiled"
+	echo "Make sure you have autoconf, automake and libtool installed"
 
-# make install
+	./buildconf
 
-# echo "start make"
-# ./configure \
-#     --prefix=$PREFIX \
-#     --enable-static \
-#     --enable-shared \
-#     --host=$TOOLNAME_BASE
+	EXITCODE=$?
+	if [ $EXITCODE -ne 0 ]; then
+		echo "Error running the buildconf program"
+		cd $PWD
+		exit $EXITCODE
+	fi
+fi
 
-[ "$0" = "$BASH_SOURCE" ] && exit 0 || return 0
+
+./configure \
+    --prefix=$outCurlib \
+    --enable-static \
+    --enable-shared \
+    --host=$TOOLNAME_BASE\
+    --with-ssl=$opensslDir \
+    --without-zlib
+
+make clean
+
+make -j$JOBS
+
+make install
+
+EXITCODE=$?
+if [ $EXITCODE -ne 0 ]; then
+	echo "Error building the curl"
+	cd $PWD
+	exit $EXITCODE
+fi
+
+[ "$0" = "$BASH_SOURCE" ] && exit 0 || return 0cd .
