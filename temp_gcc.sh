@@ -253,7 +253,7 @@ export ANDROID_SYSROOT=$AOSP_SYSROOT
 export CPP="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-cpp --sysroot=$AOSP_SYSROOT"
 export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-gcc --sysroot=$AOSP_SYSROOT"
 export CXX="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-g++ --sysroot=$AOSP_SYSROOT"
-export CFLAGS="-pie -fPIE"
+export CFLAGS="-pie -fPIE $AOSP_FLAGS"
 # export LDFLAGS="-pie -fPIE"
 #####################################################################
 
@@ -271,9 +271,6 @@ fi
 
 
 echo "openssl输出目录 =$opensslDir "
-
-export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-gcc --sysroot=$AOSP_SYSROOT"
-
 
 VERBOSE=1
 if [ ! -z "$VERBOSE" ] && [ "$VERBOSE" != "0" ]; then
