@@ -202,6 +202,59 @@ export AOSP_SYSROOT="$ANDROID_NDK_ROOT/platforms/$AOSP_API/$AOSP_ARCH"
 # TODO: export for the previous GNUmakefile-cross. These can go away eventually.
 export ANDROID_SYSROOT=$AOSP_SYSROOT
 
+
+
+#####################################################################
+
+# # Android STL. We support GNU, LLVM and STLport out of the box.
+
+# if [ "$#" -lt 2 ]; then
+#     THE_STL=stlport-shared
+# else
+#     THE_STL=$(tr [A-Z] [a-z] <<< "$2")
+# fi
+
+# case "$THE_STL" in
+#   stlport-static)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_static.a"
+#     ;;
+#   stlport|stlport-shared)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_shared.so"
+#     ;;
+#   gabi++-static|gnu-static)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
+#     AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_static.a"
+#     ;;
+#   gnu|gabi++|gnu-shared|gabi++-shared)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
+#     AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_shared.so"
+#     ;;
+#   llvm-static)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_static.a"
+#     ;;
+#   llvm|llvm-shared)
+#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
+#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_shared.so"
+#     ;;
+#   *)
+#     echo "ERROR: Unknown STL library $2"
+#     [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
+# esac
+
+
+#####################################################################
+
+
+export CPP="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-cpp --sysroot=$AOSP_SYSROOT"
+export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-gcc --sysroot=$AOSP_SYSROOT"
+export CXX="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-g++ --sysroot=$AOSP_SYSROOT"
+export CFLAGS="-pie -fPIE"
+export LDFLAGS="-pie -fPIE"
 #####################################################################
 
 export opensslDir=$(pwd)/android-lib-openssl/$AOSP_ABI
@@ -264,57 +317,6 @@ make -j$JOBS
 make install
 
 
-#####################################################################
-
-# # Android STL. We support GNU, LLVM and STLport out of the box.
-
-# if [ "$#" -lt 2 ]; then
-#     THE_STL=stlport-shared
-# else
-#     THE_STL=$(tr [A-Z] [a-z] <<< "$2")
-# fi
-
-# case "$THE_STL" in
-#   stlport-static)
-#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
-#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_static.a"
-#     ;;
-#   stlport|stlport-shared)
-#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/stlport/"
-#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/stlport/libs/$AOSP_ABI/libstlport_shared.so"
-#     ;;
-#   gabi++-static|gnu-static)
-#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
-#     AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
-#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_static.a"
-#     ;;
-#   gnu|gabi++|gnu-shared|gabi++-shared)
-#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/include"
-#     AOSP_BITS_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/include"
-#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/gnu-libstdc++/$AOSP_TOOLCHAIN_SUFFIX/libs/$AOSP_ABI/libgnustl_shared.so"
-#     ;;
-#   llvm-static)
-#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
-#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_static.a"
-#     ;;
-#   llvm|llvm-shared)
-#     AOSP_STL_INC="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libcxx/include"
-#     AOSP_STL_LIB="$ANDROID_NDK_ROOT/sources/cxx-stl/llvm-libc++/libs/$AOSP_ABI/libc++_shared.so"
-#     ;;
-#   *)
-#     echo "ERROR: Unknown STL library $2"
-#     [ "$0" = "$BASH_SOURCE" ] && exit 1 || return 1
-# esac
-
-
-#####################################################################
-
-
-export CPP="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-cpp --sysroot=$AOSP_SYSROOT"
-export CC="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-gcc --sysroot=$AOSP_SYSROOT"
-export CXX="$AOSP_TOOLCHAIN_PATH/$TOOLNAME_BASE-g++ --sysroot=$AOSP_SYSROOT"
-export CFLAGS="-pie -fPIE"
-export LDFLAGS="-pie -fPIE"
 #####################################################################
 
 echo "start build curl"
